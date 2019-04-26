@@ -1,3 +1,6 @@
+library(pacman)
+library(dplyr)
+
 ## Generate the variables and DGP
 # Trying tibble
 library(tibble)
@@ -6,8 +9,9 @@ n <- 1000
 dgp_df <- tibble( 
   e = rnorm(n , 0 , 15 ) , 
   x = runif( n , 0 , 10 ) , 
-  y = 1 + exp(0.5*x) + e )
-)
+  y = 1 + exp(0.5*x) + e 
+  )
+
 
 # Let's see what this graphs like (if we an make it look like ed's)
 library(ggplot2)
@@ -16,9 +20,70 @@ ggplot(
   data = dgp_df , 
   aes( x , y )
 ) + 
-  geom_point( color = 'gray' ) + 
+  geom_point( color = 'gray' )   + 
   geom_smooth( method = 'gam' ,
                formula = y ~ exp(0.5*x) ,
-               color = 'green') +
+               color = 'blue')  +
   geom_smooth( method = 'lm' , 
                color = 'red')
+
+
+## Regression models and simulations
+
+library(pacman)
+library(purrr)
+
+
+sim_function <- function(iter , n = 30 ){
+  # Generate DGP like we did before
+  iter_df <- tibble(
+    e = rnorm( n, sd = 15 ) , 
+    x = runif( n , 0 , 10 ) , 
+    y = 1 + exp(0.5*x) + e
+  )
+  # Doing the regression models
+  model1 <- lm_robust( y ~ x , data = iter_df , se_type = "classical" )
+  model2 <- lm_robust( y ~ x , data = iter_df , se_type = "HC2" )
+  # Binding and I need to figure out what select does 
+  bind_rows( tidy(model1) , tidy(model2) ) %>% 
+    select(1:5) %>% filter( term == 'x' ) %>%  
+    mutate( se_type = c("classical","HC2") , i = iter)
+}
+
+set.seed(12345)
+sim_list <- map(1:1e4, sim_function)
+sim_df <- bind_rows(sim_list)
+  sim_classic <- filter( sim_df , se_type=='classical')
+  sim_het <- filter( sim_df , se_type=='HC2')
+
+# Error density plots
+
+ggplot( data = sim_df , 
+        aes(x = sim_df$std.error , 
+            group = sim_df$se_type , fill=sim_df$se_type)) + 
+  geom_density( stat = "density" , 
+                color = "NA" ,
+                alpha = 0.6 ) + 
+  scale_x_continuous(name = "Standard error") +
+  scale_y_continuous(name = "Density")  +
+  ggtitle('Classical vs. heteroscedastic-consistent errors') +
+  theme(legend.title = element_blank() ,
+        panel.grid.major = element_line(colour = 'grey' , linetype = 2) ,
+        panel.background = element_blank()
+        )
+
+# t-statistic density plots
+
+ggplot( data = sim_df , 
+        aes(x = sim_df$statistic , 
+            group = sim_df$se_type , fill=sim_df$se_type)) + 
+  geom_density( stat = "density" , 
+                color = "NA" ,
+                alpha = 0.6 ) + 
+  scale_x_continuous(name = "t-statistic") +
+  scale_y_continuous(name = "Density")  +
+  ggtitle('Classical vs. heteroscedastic-consistent errors') +
+  theme(legend.title = element_blank() ,
+        panel.grid.major = element_line(colour = 'grey' , linetype = 2) ,
+        panel.background = element_blank()
+  )
