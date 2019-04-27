@@ -32,19 +32,20 @@ ggplot(
 
 library(pacman)
 library(purrr)
+library(estimatr)
 
+# Generate DGP like we did before
 
 sim_function <- function(iter , n = 30 ){
-  # Generate DGP like we did before
   iter_df <- tibble(
-    e = rnorm( n, sd = 15 ) , 
+    e = rnorm( n, 0 , 15 ) , 
     x = runif( n , 0 , 10 ) , 
     y = 1 + exp(0.5*x) + e
   )
-  # Doing the regression models
+# Doing the regression models
   model1 <- lm_robust( y ~ x , data = iter_df , se_type = "classical" )
   model2 <- lm_robust( y ~ x , data = iter_df , se_type = "HC2" )
-  # Binding and I need to figure out what select does 
+# Binding and I need to figure out what select does 
   bind_rows( tidy(model1) , tidy(model2) ) %>% 
     select(1:5) %>% filter( term == 'x' ) %>%  
     mutate( se_type = c("classical","HC2") , i = iter)
@@ -53,11 +54,8 @@ sim_function <- function(iter , n = 30 ){
 set.seed(12345)
 sim_list <- map(1:1e4, sim_function)
 sim_df <- bind_rows(sim_list)
-  sim_classic <- filter( sim_df , se_type=='classical')
-  sim_het <- filter( sim_df , se_type=='HC2')
 
 # Error density plots
-
 ggplot( data = sim_df , 
         aes(x = sim_df$std.error , 
             group = sim_df$se_type , fill=sim_df$se_type)) + 
