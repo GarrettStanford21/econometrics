@@ -45,7 +45,6 @@ sim_function <- function(iter , n = 30 ){
 # Doing the regression models
   model1 <- lm_robust( y ~ x , data = iter_df , se_type = "classical" )
   model2 <- lm_robust( y ~ x , data = iter_df , se_type = "HC2" )
-# Binding and I need to figure out what select does 
   bind_rows( tidy(model1) , tidy(model2) ) %>% 
     select(1:5) %>% filter( term == 'x' ) %>%  
     mutate( se_type = c("classical","HC2") , i = iter)
@@ -78,6 +77,86 @@ ggplot( data = sim_df ,
   geom_density( stat = "density" , 
                 color = "NA" ,
                 alpha = 0.6 ) + 
+  geom_vline( xintercept = 2 , 
+              linetype = 2 , 
+              color = "red" ) +
+  scale_x_continuous(name = "t-statistic") +
+  scale_y_continuous(name = "Density")  +
+  ggtitle('Classical vs. heteroscedastic-consistent errors') +
+  theme(legend.title = element_blank() ,
+        panel.grid.major = element_line(colour = 'grey' , linetype = 2) ,
+        panel.background = element_blank()
+  )
+
+
+## Updating to the correct null hypothesis
+
+# DGP function
+
+null_function <- function(iter , g = 0 , s = 1 , n = 30 ){
+  iter_df <- tibble(
+    e = rnorm( n, 0 , 15^s ) , 
+    x = runif( n , 0 , 10 ) , 
+    y = 1 + exp(g*x) + e
+  )
+  # Doing the regression models
+  model1 <- lm_robust( y ~ x , data = iter_df , se_type = "classical" )
+  model2 <- lm_robust( y ~ x , data = iter_df , se_type = "HC2" )
+  bind_rows( tidy(model1) , tidy(model2) ) %>% 
+    select(1:5) %>% filter( term == 'x' ) %>%  
+    mutate( se_type = c("classical","HC2") , i = iter)
+}
+
+set.seed(123)
+null_df <- map(1:1e4, null_function) %>% bind_rows()
+
+# Plots
+
+# Error density plots
+ggplot( data = null_df , 
+        aes(x = null_df$std.error , 
+            group = null_df$se_type , fill=null_df$se_type)) + 
+  geom_density( stat = "density" , 
+                color = "NA" ,
+                alpha = 0.6 ) +
+  scale_x_continuous(name = "Standard error") +
+  scale_y_continuous(name = "Density")  +
+  ggtitle('Classical vs. heteroscedastic-consistent errors') +
+  theme(legend.title = element_blank() ,
+        panel.grid.major = element_line(colour = 'grey' , linetype = 2) ,
+        panel.background = element_blank()
+  )
+
+# t-statistic density plots
+
+ggplot( data = null_df , 
+        aes(x = null_df$statistic , 
+            group = null_df$se_type , fill=null_df$se_type)) + 
+  geom_density( stat = "density" , 
+                color = "NA" ,
+                alpha = 0.6 ) + 
+  geom_vline( xintercept = 2 , 
+              linetype = 2 , 
+              color = "red" ) +
+  scale_x_continuous(name = "t-statistic") +
+  scale_y_continuous(name = "Density")  +
+  ggtitle('Classical vs. heteroscedastic-consistent errors') +
+  theme(legend.title = element_blank() ,
+        panel.grid.major = element_line(colour = 'grey' , linetype = 2) ,
+        panel.background = element_blank()
+  )
+
+# p-value density plots
+
+ggplot( data = null_df , 
+        aes(x = null_df$p.value , 
+            group = null_df$se_type , fill=null_df$se_type)) + 
+  geom_density( stat = "density" , 
+                color = "NA" ,
+                alpha = 0.6 ) + 
+  geom_vline( xintercept = 0.05 , 
+              linetype = 2 , 
+              color = "red" ) +
   scale_x_continuous(name = "t-statistic") +
   scale_y_continuous(name = "Density")  +
   ggtitle('Classical vs. heteroscedastic-consistent errors') +
