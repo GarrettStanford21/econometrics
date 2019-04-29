@@ -50,8 +50,8 @@ sim_function <- function(iter , n = 30 ){
     mutate( se_type = c("classical","HC2") , i = iter)
 }
 
-set.seed(12345)
-sim_list <- map(1:1e4, sim_function)
+set.seed(12345) # This is what Ed used
+sim_list <- map(1:1e4, sim_function)  # Run our sim 10k times
 sim_df <- bind_rows(sim_list)
 
 # Error density plots
