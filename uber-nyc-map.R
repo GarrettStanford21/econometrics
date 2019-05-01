@@ -23,9 +23,9 @@ uber_df <- bind_rows( april14 ,
 
 ## Getting to mapping
 
-p_load(ggmap)
+p_load(ggmap) # This is the package to fetch the maps
 
-## For this part you need to set up your google maps APIs-- get the Geocoding and Geocaching ones
+## For this part you need to set up your google maps APIs. If you don't have a Google account, you'll need one.
 
 wmap <- get_map( "new york city, new york" )
 
@@ -33,4 +33,8 @@ wmap <- get_map( "new york city, new york" )
 
 ggmap(wmap) + 
   geom_point( data = uber_df , 
-              aes(x = uber_df$Lon , y = uber_df$Lat ) , alpha = 0.5)
+              aes(x = uber_df$Lon , y = uber_df$Lat , color = 'red') , alpha = 0.5) +
+  scale_x_continuous( name = 'Longitude') +
+  scale_y_continuous( name = 'Latitude') + 
+  ggtitle("Uber Pick-ups, April through September 2014") +
+  theme( legend.position = "none")
