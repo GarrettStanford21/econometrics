@@ -1,7 +1,9 @@
 library(pacman)
-p_load(dplyr, 
-       broom, 
-       haven)
+p_load(dplyr , 
+       broom , 
+       haven , 
+       ggmap 
+       )
 
 ## After unloading the CSV's, replace the file path with wherever it is on your computer
 
@@ -19,22 +21,96 @@ uber_df <- bind_rows( april14 ,
                       june14, 
                       july14 , 
                       august14 , 
-                      sept14 )
+                      sept14 
+                      )
 
 ## Getting to mapping
 
-p_load(ggmap) # This is the package to fetch the maps
+nymap <- get_map( c( left = -74.4, 
+                     bottom = 40.495, 
+                     right = -73.6, 
+                     top = 40.89
+)
+)
 
-## For this part you need to set up your google maps APIs. If you don't have a Google account, you'll need one.
+## Monthly
 
-wmap <- get_map( "new york city, new york" )
+# April
 
-## (This part takes a while) 
+ggmap(nymap) + 
+  geom_point( data = april14 , 
+              aes(x = april14$Lon , 
+                  y = april14$Lat , 
+                  color = 'red') , 
+              alpha = 0.5) +
+  ggtitle("Uber Pick-ups, April 2014") +
+  theme( legend.position = "none")
+
+# May
+
+ggmap(nymap) + 
+  geom_point( data = may14 , 
+              aes(x = may14$Lon , 
+                  y = may14$Lat , 
+                  color = 'red') , 
+              alpha = 0.5) +
+  ggtitle("Uber Pick-ups, May 2014") +
+  theme( legend.position = "none")
+
+# June
+
+ggmap(nymap) + 
+  geom_point( data = june14 , 
+              aes(x = june14$Lon , 
+                  y = june14$Lat , 
+                  color = 'red') , 
+              alpha = 0.5) +
+  ggtitle("Uber Pick-ups, June 2014") +
+  theme( legend.position = "none")
+
+# July
+
+ggmap(nymap) + 
+  geom_point( data = july14 , 
+              aes(x = july14$Lon , 
+                  y = july14$Lat , 
+                  color = 'red') , 
+              alpha = 0.5) +
+  ggtitle("Uber Pick-ups, July 2014") +
+  theme( legend.position = "none")
+
+# August
+
+ggmap(nymap) + 
+  geom_point( data = august14 , 
+              aes(x = august14$Lon , 
+                  y = august14$Lat , 
+                  color = 'red') , 
+              alpha = 0.5) +
+  ggtitle("Uber Pick-ups, August 2014") +
+  theme( legend.position = "none")
+
+# Septempber
+
+ggmap(nymap) + 
+  geom_point( data = sept14 , 
+              aes(x = sept14$Lon , 
+                  y = sept14$Lat , 
+                  color = 'red') , 
+              alpha = 0.5) +
+  ggtitle("Uber Pick-ups, September 2014") +
+  theme( legend.position = "none")
+
+
+
+## POOLED SAMPLE!! (This part takes a while) 
 
 ggmap(wmap) + 
   geom_point( data = uber_df , 
-              aes(x = uber_df$Lon , y = uber_df$Lat , color = 'red') , alpha = 0.5) +
-  scale_x_continuous( name = 'Longitude') +
-  scale_y_continuous( name = 'Latitude') + 
+              aes(x = uber_df$Lon , 
+                  y = uber_df$Lat , 
+                  color = 'red') , 
+              alpha = 0.5) +
   ggtitle("Uber Pick-ups, April through September 2014") +
   theme( legend.position = "none")
+
