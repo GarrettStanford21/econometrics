@@ -8,7 +8,7 @@ p_load( ipumsr,
 
 # Data Gathering and Cleaning
 
-ddi <- read_ipums_ddi("D:/Economics/Data/CPS Data/cps_00023.xml")
+ddi <- read_ipums_ddi("D:/Economics/Data/CPS Data/cps_00024.xml")
 data <- read_ipums_micro(ddi)
 
 
@@ -17,7 +17,7 @@ data <- read_ipums_micro(ddi)
 
 # Annual Social and Economic Supplement (March Supplement)
 
-asec_df <- data  %>% filter( ASECFLAG == 1 ) %>% select( -c(HWTFINL, WTFINL))
+asec_df <- data  %>% mutate(HFLAG = replace_na(HFLAG, 1)) %>% filter( ASECFLAG == 1 & HFLAG ==1 ) # See https://cps.ipums.org/cps/three_eighths.shtml
 
 ## Insurance and Demographic Variables
 
@@ -40,7 +40,6 @@ asec_df <- asec_df %>% mutate( woman_pop = woman*ASECWT ,
 ## Collapsing by state/year
 
 asec_st <- asec_df %>% group_by( STATEFIP ,  YEAR ) %>% summarise( population = sum(ASECWT) , women = sum(woman_pop) , prime_age = sum(prime_age_pop) , private = sum(private_pop) , medicare=sum(medicare_pop) ,  medicaid=sum(medicaid_pop) , militcare = sum(militcare_pop) ) %>% arrange(YEAR)
-
 asec_st <- asec_st %>% mutate( fem_rate = women / population , 
                                prime_rate = prime_age / population , 
                                private_rate = private/ population ,
@@ -48,9 +47,9 @@ asec_st <- asec_st %>% mutate( fem_rate = women / population ,
                                medicare_rate = medicare / population , 
                                militcare_rate = militcare / population)
 
-##Code Test
-#wisconsin_medicaid <- asec_st %>% filter(STATEFIP == 55) %>% select(YEAR, STATEFIP, medicaid_rate , medicaid)
-#ggplot() + geom_line(data = wisconsin_medicaid , mapping = aes( x = YEAR , y = medicaid_rate))
+##Code Test : Plot Wisconsin medicaid
+wisconsin <- asec_st %>% filter(STATEFIP == 55) %>% select(YEAR, STATEFIP, population , medicaid_rate , medicaid)
+ggplot() + geom_line( data = wisconsin , mapping = aes( x = YEAR , y = medicaid ) )
 
 write.table(x = asec_st, 
             file = "D:/Economics/Data/CPS Data/asec_st")
