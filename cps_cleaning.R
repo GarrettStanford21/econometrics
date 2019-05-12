@@ -19,7 +19,7 @@ data <- read_ipums_micro(ddi)
 
 asec_df <- data  %>% mutate(HFLAG = replace_na(HFLAG, 1)) %>% filter( ASECFLAG == 1 & HFLAG ==1 ) # See https://cps.ipums.org/cps/three_eighths.shtml
 
-## Insurance and Demographic Variables
+## Insurance, Demographic, and employment Variables
 
 asec_df <- asec_df %>% mutate( woman = ifelse(SEX==2 , 1 , 0) ,
                                prime_age = ifelse(AGE > 24 & AGE < 66, 1, 0) ,
@@ -27,7 +27,10 @@ asec_df <- asec_df %>% mutate( woman = ifelse(SEX==2 , 1 , 0) ,
                                public = ifelse(HIMCAID==2 | HIMCARE==2 | HICHAMP==2, 1, 0), 
                                medicaid = ifelse(HIMCAID==2, 1, 0) ,
                                medicare = ifelse(HIMCARE==2, 1, 0) ,
-                               militcare = ifelse(HICHAMP==2, 1, 0) )
+                               militcare = ifelse(HICHAMP==2, 1, 0) ,
+                               unemployed = ifelse(EMPSTAT==20|EMPSTAT==21|EMPSTAT==22, 1, 0) , 
+                               combat_vet = ifelse(VETSTAT==2, 1, 0) , 
+                               ilf = ifelse(LABFORCE==2, 1, 0) )
 
 asec_df <- asec_df %>% mutate( woman_pop = woman*ASECWT ,
                                prime_age_pop = prime_age*ASECWT ,
@@ -35,25 +38,31 @@ asec_df <- asec_df %>% mutate( woman_pop = woman*ASECWT ,
                                public_pop = public*ASECWT ,
                                medicaid_pop = medicaid*ASECWT ,
                                medicare_pop = medicare*ASECWT ,
-                               militcare_pop = militcare*ASECWT)
+                               militcare_pop = militcare*ASECWT ,
+                               unemployed_pop = unemployed*ASECWT ,
+                               vet_pop = combat_vet*ASECWT ,
+                               lfp = ilf*ASECWT )
 
 ## Collapsing by state/year
 
-asec_st <- asec_df %>% group_by( STATEFIP ,  YEAR ) %>% summarise( population = sum(ASECWT) , women = sum(woman_pop) , prime_age = sum(prime_age_pop) , private = sum(private_pop) , medicare=sum(medicare_pop) ,  medicaid=sum(medicaid_pop) , militcare = sum(militcare_pop) ) %>% arrange(YEAR)
+asec_st <- asec_df %>% group_by( STATEFIP ,  YEAR ) %>% summarise( population = sum(ASECWT) , women = sum(woman_pop) , prime_age = sum(prime_age_pop) , private = sum(private_pop) , medicare=sum(medicare_pop) ,  medicaid=sum(medicaid_pop) , militcare = sum(militcare_pop) , unemployed = sum(unemployed_pop) , combat_vets = sum(vet_pop) , lfp = sum(lfp) ) %>% arrange(YEAR)
 asec_st <- asec_st %>% mutate( fem_rate = women / population , 
                                prime_rate = prime_age / population , 
                                private_rate = private/ population ,
                                medicaid_rate = medicaid / population , 
                                medicare_rate = medicare / population , 
-                               militcare_rate = militcare / population)
+                               militcare_rate = militcare / population ,
+                               vet_rate = combat_vets / population ,
+                               lfpr = lfp / population ,
+                               ue_rate = unemployed / lfp )
 
 ##Code Test : Plot Wisconsin medicaid
 
-wisconsin <- asec_st %>% filter(STATEFIP == 55) %>% select(YEAR, STATEFIP, population , medicaid_rate , medicaid)
+wisconsin <- asec_st %>% filter(STATEFIP == 55) %>% select(YEAR, STATEFIP, population , medicaid_rate , medicaid , lfp, unemployed, lfpr , ue_rate)
 ggplot() + 
-  geom_line( data = Oregon , mapping = aes( x = YEAR , y = medicaid_rate , color = 'Red') ) +
+  geom_line( data = wisconsin , mapping = aes( x = YEAR , y = lfp , color = 'Red') ) +
   scale_x_continuous( name = 'Year' ) +
-  scale_y_continuous( name = 'Medicaid Coverage Rate (Oregon)') +
+  scale_y_continuous( name = 'Labor Force Participation Rate (Wisconsin)') +
   theme( panel.background = element_blank() ,
          panel.grid.major = element_line(color = 'grey' , linetype = 2) , 
          panel.grid.minor = element_line(color = 'grey' , linetype = 2) ,
@@ -62,12 +71,7 @@ ggplot() +
   )
 
 
-
-write.table(x = asec_st, 
-            file = "D:/Economics/Data/CPS Data/asec_st")
-
-upper_midwest <- asec_st %>% filter(STATEFIP == 26 | STATEFIP==27 | STATEFIP==55 ) %>% select(YEAR, STATEFIP, population , medicaid_rate , medicaid)
-upper_midwest$STATEFIP <- factor(upper_midwest$STATEFIP ,
+asec_st$STATEFIP <- factor(asec_st$STATEFIP ,
                                  levels = c( 
                                    1	,  2	,   4	,   5	,   6	,   8	,   9	,   10	,
                                    11	,   12	,   13	,   15	,   16	,   17	,   18	,
@@ -88,6 +92,11 @@ upper_midwest$STATEFIP <- factor(upper_midwest$STATEFIP ,
                                    "West Virginia"	,"Wisconsin"	,"Wyoming" 
                                  )
 )
+
+write.table(x = asec_st, 
+            file = "D:/Economics/Data/CPS Data/asec_st")
+
+upper_midwest <- asec_st %>% filter(STATEFIP == 26 | STATEFIP==27 | STATEFIP==55 ) %>% select(YEAR, STATEFIP, population , medicaid_rate , medicaid)
 
 
 ggplot( data = upper_midwest , aes( x = YEAR , y = population , color=STATEFIP) ) + 
