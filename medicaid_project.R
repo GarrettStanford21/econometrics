@@ -26,7 +26,7 @@ data_df <- filter( data_df , YEAR > 2000 & YEAR < 2010) %>% bind_cols(mcinerney_
 )
 
 
-data_df <- data_df %>% mutate( suicide_rate_total = suicide_total*(100000/population) , # creating suicide-per-100,000 variables using CPS population data
+data_df <- data_df %>% mutate( suicide_rate_total = suicide_total*(100000/population) , # creating suicide-per-10,000 variables using CPS population data
                     suicide_rate_guns = suicide_guns*(100000/population) , 
                     suicide_rate_other = suicide_other*(100000/population) ,
                     medicaid_rate = medicaid_rate*100 , # the Medicaid eligibility measure uses %*100 format so I also want my rates to look that way, too
@@ -34,14 +34,19 @@ data_df <- data_df %>% mutate( suicide_rate_total = suicide_total*(100000/popula
                     prime_rate = prime_rate*100 ,
                     medicare_rate = medicare_rate*100 ,
                     militcare_rate = militcare_rate*100 ,
-                    fem_rate = fem_rate*100 )
+                    fem_rate = fem_rate*100 , 
+                    ue_rate = ue_rate*100 )
 
 # model specifications: first stage then IV
-model1s_basic <- log(medicaid) ~ se1_v4w + log(private) + prime_rate + fem_rate
-model_iv_basic <-  log(suicide_total) ~ log(medicaid) + log(private) + prime_rate + fem_rate | se1_v4w + log(private) + prime_rate + fem_rate 
+model1s_basic <- medicaid_rate ~ se1_v4w + private_rate + prime_rate + fem_rate
+model_iv_basic <-  log(suicide_total) ~ medicaid_rate + private_rate + prime_rate + fem_rate | se1_v4w + private_rate + prime_rate + fem_rate 
 
-model1s_vets <- log(medicaid) ~ se1_v4w + log(private) + prime_rate + fem_rate + combat_vets + log(militcare)
-model_iv_vets <- log(suicide_total) ~ log(medicaid) + log(private) + prime_rate + fem_rate + combat_vets + log(militcare) | se1_v4w + log(private) + prime_rate + fem_rate + combat_vets + log(militcare) 
+model1s_ue <- medicaid_rate ~ se1_v4w + private_rate + prime_rate + fem_rate + ue_rate
+model_iv_ue <-  log(suicide_total) ~ medicaid_rate + private_rate + prime_rate + fem_rate + ue_rate | se1_v4w + private_rate + prime_rate + fem_rate + ue_rate
+
+
+model1s_vets <- medicaid_rate ~ se1_v4w + private_rate + prime_rate + fem_rate + ue_rate + combat_vets + militcare_rate
+model_iv_vets <- log(suicide_total) ~ medicaid_rate + private_rate + prime_rate + fem_rate + ue_rate + combat_vets + militcare_rate | se1_v4w + private_rate + prime_rate + fem_rate + ue_rate + combat_vets + militcare_rate 
 
 # regressions: same ordering as above
 
@@ -50,12 +55,32 @@ s1_reg_basic <- lm_robust(data = data_df ,
                     se_type = "stata" ,
                     fixed_effects = ~STATEFIP + YEAR
 )
+tidy(s1_reg_basic)
+
+
 iv_reg_basic <- iv_robust(data = data_df , 
                     formula = model_iv_basic ,
                     se_type = "stata" , 
                     fixed_effects = ~ STATEFIP + YEAR ,
                     clusters = STATEFIP
 )
+tidy(iv_reg_basic)
+
+s1_reg_ue <- lm_robust(data = data_df ,
+                          formula = model1s_ue, 
+                          se_type = "stata" ,
+                          fixed_effects = ~STATEFIP + YEAR
+)
+tidy(s1_reg_ue)
+
+
+iv_reg_ue <- iv_robust(data = data_df , 
+                          formula = model_iv_ue ,
+                          se_type = "stata" , 
+                          fixed_effects = ~ STATEFIP + YEAR ,
+                          clusters = STATEFIP
+)
+tidy(iv_reg_ue)
 
 
 s1_reg_vets <- lm_robust(data = data_df ,
@@ -63,19 +88,19 @@ s1_reg_vets <- lm_robust(data = data_df ,
                           se_type = "stata" ,
                           fixed_effects = ~STATEFIP + YEAR
 )
+tidy(s1_reg_vets)
+
+
 iv_reg_vets <- iv_robust(data = data_df , 
                           formula = model_iv_vets ,
                           se_type = "stata" , 
                           fixed_effects = ~ STATEFIP + YEAR ,
                           clusters = STATEFIP
 )
-                          
-
-tidy(s1_reg_basic)
-tidy(iv_reg_basic)
-
-tidy(s1_reg_vets)
 tidy(iv_reg_vets)
+
+
+
 
 # suicide rate plot for proposal
 y <- suicide_df %>% group_by(YEAR) %>% summarise( suicide = sum(suicide_total))
