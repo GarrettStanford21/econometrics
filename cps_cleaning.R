@@ -56,69 +56,60 @@ asec_st <- asec_st %>% mutate( fem_rate = women / population ,
                                lfpr = lfp / population ,
                                ue_rate = unemployed / lfp )
 
-##Code Test : Plot Wisconsin medicaid
-
-wisconsin <- asec_st %>% filter(STATEFIP == 55) %>% select(YEAR, STATEFIP, population , medicaid_rate , medicaid , lfp, unemployed, lfpr , ue_rate)
-ggplot() + 
-  geom_line( data = wisconsin , mapping = aes( x = YEAR , y = lfp , color = 'Red') ) +
-  scale_x_continuous( name = 'Year' ) +
-  scale_y_continuous( name = 'Labor Force Participation Rate (Wisconsin)') +
-  theme( panel.background = element_blank() ,
-         panel.grid.major = element_line(color = 'grey' , linetype = 2) , 
-         panel.grid.minor = element_line(color = 'grey' , linetype = 2) ,
-         legend.title = element_blank() ,
-         legend.text = element_blank()
-  )
-
-
-asec_st$STATEFIP <- factor(asec_st$STATEFIP ,
-                                 levels = c( 
-                                   1	,  2	,   4	,   5	,   6	,   8	,   9	,   10	,
-                                   11	,   12	,   13	,   15	,   16	,   17	,   18	,
-                                   19	,   20	,   21	,   22	,   23	,   24	,   25	,   
-                                   26	,   27	,   28	,   29	,   30	,   31	,   32	,   
-                                   33	,   34	,   35	,   36	,   37	,   38	,   39	,
-                                   40	,   41	,   42	,   44	,   45	,   46	,   47  ,   
-                                   48	,   49	,   50	,    51	,   53	,   54	,   55	,
-                                   56  
-                                 ),
-                                 labels = c(
-                                   "Alabama"	,"Alaska"	,"Arizona"	,"Arkansas"	,"California"	,"Colorado"	,"Connecticut"	,"Delaware"	,
-                                   "District of Columbia"	,"Florida"	,"Georgia"	,"Hawaii"	,"Idaho"	,"Illinois"	,"Indiana"	,"Iowa"	,
-                                   "Kansas"	,"Kentucky"	,"Louisiana"	,"Maine"	,"Maryland"	,"Massachusetts"	,"Michigan"	,"Minnesota"	,
-                                   "Mississippi"	,"Missouri"	,"Montana"	,"Nebraska"	,"Nevada"	,"New Hampshire"	,"New Jersey"	,"New Mexico"	,
-                                   "New York"	,"North Carolina"	,"North Dakota"	,"Ohio" ,"Oklahoma"	,"Oregon"	,"Pennsylvania"	,"Rhode Island"	,
-                                   "South Carolina"	,"South Dakota"	,"Tennessee"	,"Texas"	,"Utah"	,"Vermont"	,"Virginia"	,"Washington"	,
-                                   "West Virginia"	,"Wisconsin"	,"Wyoming" 
-                                 )
-)
 
 write.table(x = asec_st, 
             file = "D:/Economics/Data/CPS Data/asec_st")
 
-upper_midwest <- asec_st %>% filter(STATEFIP == 26 | STATEFIP==27 | STATEFIP==55 ) %>% select(YEAR, STATEFIP, population , medicaid_rate , medicaid)
+asec_st$STATEFIP <- factor(asec_st$STATEFIP ,
+                           levels = c( 
+                             1	,  2	,   4	,   5	,   6	,   8	,   9	,   10	,
+                             11	,   12	,   13	,   15	,   16	,   17	,   18	,
+                             19	,   20	,   21	,   22	,   23	,   24	,   25	,   
+                             26	,   27	,   28	,   29	,   30	,   31	,   32	,   
+                             33	,   34	,   35	,   36	,   37	,   38	,   39	,
+                             40	,   41	,   42	,   44	,   45	,   46	,   47  ,   
+                             48	,   49	,   50	,   51	,   53	,   54	,   55	,
+                             56  
+                           ),
+                           labels = c(
+                             "Alabama"	,"Alaska"	,"Arizona"	,"Arkansas"	,"California"	,"Colorado"	,"Connecticut"	,"Delaware"	,
+                             "District of Columbia"	,"Florida"	,"Georgia"	,"Hawaii"	,"Idaho"	,"Illinois"	,"Indiana"	,"Iowa"	,
+                             "Kansas"	,"Kentucky"	,"Louisiana"	,"Maine"	,"Maryland"	,"Massachusetts"	,"Michigan"	,"Minnesota"	,
+                             "Mississippi"	,"Missouri"	,"Montana"	,"Nebraska"	,"Nevada"	,"New Hampshire"	,"New Jersey"	,"New Mexico"	,
+                             "New York"	,"North Carolina"	,"North Dakota"	,"Ohio" ,"Oklahoma"	,"Oregon"	,"Pennsylvania"	,"Rhode Island"	,
+                             "South Carolina"	,"South Dakota"	,"Tennessee"	,"Texas"	,"Utah"	,"Vermont"	,"Virginia"	,"Washington"	,
+                             "West Virginia"	,"Wisconsin"	,"Wyoming" 
+                           )
+)
+
+upper_midwest <- asec_st %>% filter( STATEFIP == "Michigan" | STATEFIP == "Minnesota" | STATEFIP == "Wisconsin" ) %>% select(YEAR, STATEFIP, population , medicaid_rate , medicaid )
 
 
 ggplot( data = upper_midwest , aes( x = YEAR , y = population , color=STATEFIP) ) + 
-  geom_line(aes(group= STATEFIP )) +
+  geom_line(aes( group= STATEFIP ) , 
+            size=2 ) +
   scale_x_continuous( name = 'Year' ) +
   scale_y_continuous( name = 'Population') +
+  ggtitle("Population Over Time in the Upper Midwest") +
   theme( panel.background = element_blank() ,
          panel.grid.major = element_line(color = 'grey' , linetype = 2) , 
          panel.grid.minor = element_line(color = 'grey' , linetype = 2) ,
          legend.title = element_blank()
   )
 ggplot( data = upper_midwest , aes( x = YEAR , y = medicaid , color=STATEFIP) ) + 
-  geom_line(aes(group= STATEFIP )) +
+  geom_line(aes( group= STATEFIP ) ,
+            size=2) +
   scale_x_continuous( name = 'Year' ) +
   scale_y_continuous( name = 'Population Insured by Medicaid') +
+  ggtitle("Medicaid-Covered Population Over Time in the Upper Midwest") +
   theme( panel.background = element_blank() ,
          panel.grid.major = element_line(color = 'grey' , linetype = 2) , 
          panel.grid.minor = element_line(color = 'grey' , linetype = 2) ,
          legend.title = element_blank()
   )
 ggplot( data = upper_midwest , aes( x = YEAR , y = medicaid_rate , color=STATEFIP) ) + 
-  geom_line(aes(group= STATEFIP )) +
+  geom_line(aes( group= STATEFIP ) ,
+            size=2) +
   scale_x_continuous( name = 'Year' ) +
   scale_y_continuous( name = 'Medicaid Coverage Rate') +
   ggtitle("Medicaid Coverage Rates Over Time in the Upper Midwest") +
