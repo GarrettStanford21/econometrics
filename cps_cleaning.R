@@ -49,7 +49,19 @@ asec_df <- asec_df %>% mutate( woman_pop = woman*ASECWT ,
 
 ## Collapsing by state/year
 
-asec_st <- asec_df %>% group_by( STATEFIP ,  YEAR ) %>% summarise( population = sum(ASECWT) , women = sum(woman_pop) , prime_age = sum(prime_age_pop) , m_older_age = sum(m_older_age_pop) , f_mid_age = sum(f_mid_age_pop) , private = sum(private_pop) , medicare=sum(medicare_pop) ,  medicaid=sum(medicaid_pop) , militcare = sum(militcare_pop) , unemployed = sum(unemployed_pop) , combat_vets = sum(vet_pop) , lfp = sum(lfp) ) %>% arrange(YEAR)
+asec_st <- asec_df %>% group_by( STATEFIP ,  YEAR ) %>% summarise( population = sum(ASECWT) ,
+                                                                   women = sum(woman_pop) , 
+                                                                   prime_age = sum(prime_age_pop) , 
+                                                                   m_older_age = sum(m_older_age_pop) , 
+                                                                   f_mid_age = sum(f_mid_age_pop) , 
+                                                                   private = sum(private_pop) , 
+                                                                   medicare=sum(medicare_pop) ,  
+                                                                   medicaid=sum(medicaid_pop) , 
+                                                                   militcare = sum(militcare_pop) , 
+                                                                   unemployed = sum(unemployed_pop) , 
+                                                                   combat_vets = sum(vet_pop) , 
+                                                                   lfp = sum(lfp) ) %>% arrange(YEAR)
+
 asec_st <- asec_st %>% mutate( fem_rate = women / population , 
                                prime_rate = prime_age / population ,
                                elder_rate = older_age / population , 
