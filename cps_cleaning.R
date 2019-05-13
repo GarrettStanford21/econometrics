@@ -23,6 +23,8 @@ asec_df <- data  %>% mutate(HFLAG = replace_na(HFLAG, 1)) %>% filter( ASECFLAG =
 
 asec_df <- asec_df %>% mutate( woman = ifelse(SEX==2 , 1 , 0) ,
                                prime_age = ifelse(AGE > 24 & AGE < 66, 1, 0) ,
+                               m_older_age = ifelse(AGE > 44 & SEX==1, 1, 0) ,
+                               f_mid_age = ifelse(AGE > 44 & age < 56 & SEX==2, 1, 0) ,
                                private = ifelse(COVERPI==2, 1, 0) , 
                                public = ifelse(HIMCAID==2 | HIMCARE==2 | HICHAMP==2, 1, 0), 
                                medicaid = ifelse(HIMCAID==2, 1, 0) ,
@@ -34,6 +36,8 @@ asec_df <- asec_df %>% mutate( woman = ifelse(SEX==2 , 1 , 0) ,
 
 asec_df <- asec_df %>% mutate( woman_pop = woman*ASECWT ,
                                prime_age_pop = prime_age*ASECWT ,
+                               m_older_age_pop = older_age*ASECWT , 
+                               f_mid_age_pop = f_mid_age*ASECWT ,
                                private_pop = private*ASECWT , 
                                public_pop = public*ASECWT ,
                                medicaid_pop = medicaid*ASECWT ,
@@ -45,9 +49,10 @@ asec_df <- asec_df %>% mutate( woman_pop = woman*ASECWT ,
 
 ## Collapsing by state/year
 
-asec_st <- asec_df %>% group_by( STATEFIP ,  YEAR ) %>% summarise( population = sum(ASECWT) , women = sum(woman_pop) , prime_age = sum(prime_age_pop) , private = sum(private_pop) , medicare=sum(medicare_pop) ,  medicaid=sum(medicaid_pop) , militcare = sum(militcare_pop) , unemployed = sum(unemployed_pop) , combat_vets = sum(vet_pop) , lfp = sum(lfp) ) %>% arrange(YEAR)
+asec_st <- asec_df %>% group_by( STATEFIP ,  YEAR ) %>% summarise( population = sum(ASECWT) , women = sum(woman_pop) , prime_age = sum(prime_age_pop) , m_older_age = sum(m_older_age_pop) , f_mid_age = sum(f_mid_age_pop) , private = sum(private_pop) , medicare=sum(medicare_pop) ,  medicaid=sum(medicaid_pop) , militcare = sum(militcare_pop) , unemployed = sum(unemployed_pop) , combat_vets = sum(vet_pop) , lfp = sum(lfp) ) %>% arrange(YEAR)
 asec_st <- asec_st %>% mutate( fem_rate = women / population , 
-                               prime_rate = prime_age / population , 
+                               prime_rate = prime_age / population ,
+                               elder_rate = older_age / population , 
                                private_rate = private/ population ,
                                medicaid_rate = medicaid / population , 
                                medicare_rate = medicare / population , 
