@@ -12,7 +12,8 @@ p_load( broom ,
         haven ,
         tidyverse ,
         estimatr ,
-        huxtable )
+        huxtable , 
+        knitr)
 ```
 ***
 # Proposal
@@ -50,28 +51,27 @@ I estimate the following model:
 
 Where $\widehat{Medicaidrate_{st}} = \gamma_0 + \gamma_1 SimElig_{st} + \eta X_{st}$ is the fitted value of the proportion of state $s$ population covered by Medicaid in year $t$. $SimElig_{st}$ is the simulated eligibility measure borrowed from McInerney et al.; $X_{st}$ is a vector of covariates believed to affect suicide-- in the broadest specification this includes the share of state population on private insurance, the share of women aged 45-55 in the population, the share of men over age 45 in the population,\footnote{These are the gender-age groups identified as the highest rates of suicide according to the National Institutes for Mental Health: https://www.nimh.nih.gov/health/statistics/suicide.shtml} the unemployment rate, the share of population who are combat veterans, and the share of the population served by military/VA health insurance. 
 
-
-```{r, echo=FALSE}
-data_df <- read.table("D:/Economics/Data/CPS Data/medicaid_data_df")
-model_iv_basic <-  log(suicide_total) ~ medicaid_rate + private_rate + m_older_age_rate + f_mid_age_rate  | se1_v4w + private_rate  + m_older_age_rate + f_mid_age_rate
+```{r, echo=FALSE , fig.align='center'} 
+data_df <- read.table("D:/Economics/Data/Medicaid Insurance and Suicide/medicaid_data_df")
+model_iv_basic <-  log(suicide_total) ~ medicaid_rate + private_rate + m_older_age_rate + f_mid_age_rate  | se1_v4w + private_rate  + m_older_age_rate + f_mid_age_rate 
 iv_reg_basic <- iv_robust(data = data_df , 
                     formula = model_iv_basic ,
                     se_type = "stata" , 
-                    fixed_effects = ~ STATEFIP + YEAR ,
-                    clusters = STATEFIP
+                    fixed_effects = ~STATEFIP + YEAR ,
+                    clusters = STATEFIP 
 )
 model_iv_ue <-  log(suicide_total) ~ medicaid_rate + private_rate + ue_rate + m_older_age_rate + f_mid_age_rate | se1_v4w + private_rate + ue_rate + m_older_age_rate + f_mid_age_rate
 iv_reg_ue <- iv_robust(data = data_df , 
                     formula = model_iv_ue ,
                     se_type = "stata" , 
-                    fixed_effects = ~ STATEFIP + YEAR ,
+                    fixed_effects = ~STATEFIP + YEAR ,
                     clusters = STATEFIP
 )
-model_iv_vets <- log(suicide_total) ~ medicaid_rate + private_rate + ue_rate + vet_rate + militcare_rate + m_older_age_rate + f_mid_age_rate | se1_v4w + private_rate + ue_rate + vet_rate + militcare_rate + m_older_age_rate + f_mid_age_rate 
+model_iv_vets <- log(suicide_total) ~ medicaid_rate + private_rate + ue_rate + vet_rate + militcare_rate + m_older_age_rate + f_mid_age_rate | se1_v4w + private_rate + ue_rate + vet_rate + militcare_rate + m_older_age_rate + f_mid_age_rate
 iv_reg_vets <- iv_robust(data = data_df , 
                     formula = model_iv_vets ,
                     se_type = "stata" , 
-                    fixed_effects = ~ STATEFIP + YEAR ,
+                    fixed_effects = ~STATEFIP + YEAR ,
                     clusters = STATEFIP
 )
 results_tbl <- huxreg('Basic' = iv_reg_basic, '+ Unemployment' = iv_reg_ue, '+ Veterans' = iv_reg_vets, stars = c(`*` = 0.1, `**` = 0.05, `***` = 0.01), statistics = c('N' = 'nobs') , coefs = c('Medicaid Rate' = 'medicaid_rate' , 'Private Rate' = 'private_rate' , 'Pct Men (Age 45+)' = 'm_older_age_rate' , 'Pct Women (Age 45-55)' = 'f_mid_age_rate' , 'Unemployment Rate' = 'ue_rate' , 'Pct Veterans' = 'vet_rate' , 'Military/VA' = 'militcare_rate') , error_pos='right')
@@ -80,3 +80,8 @@ results_tbl %>%
   theme_article %>% set_background_color(1:nrow(results_tbl) , evens, grey(.95)) %>% set_top_border(final(), 1, 1) %>% set_caption('IV Results')
 ```
 
+In the specification with the greatest number of controls, the treatment effect of a given percentage point Medicaid expansion in the 2001-2009 rounds was about a 1.5\% drop in the number of suicides.
+
+# Discussion and Futher Research
+
+While the preliminary round of results is encouraging, there is much further work to be done. The panel being used in this analysis depends on the measure of simulated Medicaid eligibility constructed by McInerney et. al. (2017), which only exists for the years 2001-2009. Ideally I could use a simulated eligibility measure that takes into account the changes induced by the ACA round of expansions, and offers more identifying variation on the states that expanded vs. states which chose not to, on account of the *National Federation of Independent Business v. Sebelius, 567 U.S. 519 (2012)* ruling. Trying to find (or construct) such a measure, and identify the causal impact of Medicaid expansions over the entire extended 2001-2017 panel, represents the next step in this investigation.
