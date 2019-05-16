@@ -1,0 +1,87 @@
+---
+title: 'Do Medicaid Expansions Reduce Suicides?'
+author: "Chris Berg"
+date: "May 9, 2019"
+output:
+  html_document: default
+  pdf_document: default
+---
+```{r, echo=FALSE}
+library(pacman)
+p_load( broom ,
+        haven ,
+        tidyverse ,
+        estimatr ,
+        huxtable , 
+        knitr)
+```
+***
+# Proposal
+
+Suicide rates in the United States have increased drastically since 1999-- in particular, there were roughly 37% more suicides per 100,000 US residents in 2017 than in 1999, according to vital statistics provided by the Centers for Disease Control. This trend has played-out in the context of a very complex patchwork of public and private healthcare provision in the United States, in which-- until recently-- an estimated quarter to a third of individuals could've had healthcare denied to them due to pre-existing medical conditions.\footnote{https://www.kff.org/other/state-indicator/estimated-number-of-non-elderly-adults-with-declinable-pre-existing-conditions-under-pre-aca-practices/}.
+
+```{r, fig.align='center', fig.width=6, fig.height=4, echo=FALSE}
+load(file="suicide_rate.RData")
+suiciderate_plot
+
+```
+
+Additionally, the Kaiser Family Foundation documents that most individuals who are insured receive their insurance through an employer\footnote{https://www.kff.org/other/state-indicator/total-population/}, so it would've been especially difficult for an individual with documented pre-existing mental health condition to receive care if they became unemployed. The increasing prevalence of suicide, as well as the complicated nature of receiving healthcare, raise concerns about the efficiency of mental healthcare allocation in the United States (to say nothing of the greater normative equity concerns). 
+
+Even before the advent of the Affordable Care Act, many states had responded to these concerns by allocating more healthcare through expanded eligibility for their Medicaid programs. These states generally passed laws making single adults and childless households-- who are nonetheless near federal poverty levels-- eligible for healthcare that was formerly extended only to families with young children\footnote{E.g. Wisconsin; see DeLeire et. al. 2013 https://www.healthaffairs.org/doi/full/10.1377/hlthaff.2012.1026}. If these medicaid expansions to poor adults represent an allocation of mental health care to low-income adults wo were formerly-lacking, do suicide rates respond to this new provision of healthcare? If they do, then such benefits need to be factored into both analyses of benefits and costs of health policy, as well as considerations of healthcare market failure and deadweight loss.
+
+# Methodology and Data
+
+### Methodology
+
+Eligibility requirements for Medicaid generate selection into the program from a pool of very low income adults. This is problematic for OLS estimation since there may be unobservable confounding factors (such as mental health) which lead individuals being poorer and having a higher propensity for suicide. To overcome this identification problem, I will be using statutory variation in the share of the medicaid-eligibile population between states-- plausibly independent of the suicide rate in a given state-- as an instrument for the share of the state population covered by Medicaid.
+
+### Data
+
+Data on suicide is drawn from the National Health Statistics Underlying Cause of Death files, accessible from the Centers for Disease Control WONDER Online database. Data for all insurance and control variables comes from the Annual Social and Economic Supplement (ASEC) of the Current Population Survey (CPS), which contains individal-level survey data on demographics, income, employment, and insurance coverage. ASEC data is needed since, beyond the traditional survey questions that the Census asks CPS respondents, the ASEC asks questions about income and insurance that are missing from the March basic survey. We are able to tell which individuals in the ASEC are covered by private or public insurance or both; whether their private insurance comes through their employer or otherwise; and for our purposes, they are asked if they are enrolled in Medicaid. I will use the ASEC for this, as well as demographic covariates. Additionally, McInerney et. al. (2017)\footnote{https://www.aeaweb.org/articles?id=10.1257/pol.20150402} have used detailed state eligibility criteria combined with the ASEC to construct shares of each state's population which are hypothetically eligible to receive Medicaid. This is important, because while actual medicaid enrollment is subject to individual selection, their eligibility is determined by statute. The resulting data is a 9-year panel which covers all 50 states, from the year 2001 until 2009, reflecting the availability of the simulated eligibility variable.
+
+# Model and Results
+
+
+Medicaid enrollment, as indicated, may not be random. It is more likely that *conditional on covariates* Medicaid expansions are independent of the suicide rate, so that after controlling for variables that plausibly explain a states selection into expanding Medicaid, variation in eligibility is as good as random. The effect on suicides will be estimated via instrumental variables regression. In this case, the proportion of the state enrolled in Medicaid will be instrumented with the proportion of individuals who would be eligible to receive Medicaid under the law. With the exclusion restriction, this ought to allow me to estimate the effect of increased allocation of mental health care on suicide rates, through the uptake in Medicaid following an eligibility expansion.
+
+I estimate the following model:
+
+\begin{align} log(Suicide_{st}) = \beta_0 + \beta_1 \widehat{Medicaidrate_{st}} + \delta X_{st} + \varepsilon_{st} \end{align}
+
+Where $\widehat{Medicaidrate_{st}} = \gamma_0 + \gamma_1 SimElig_{st} + \eta X_{st}$ is the fitted value of the proportion of state $s$ population covered by Medicaid in year $t$. $SimElig_{st}$ is the simulated eligibility measure borrowed from McInerney et al.; $X_{st}$ is a vector of covariates believed to affect suicide-- in the broadest specification this includes the share of state population on private insurance, the share of women aged 45-55 in the population, the share of men over age 45 in the population,\footnote{These are the gender-age groups identified as the highest rates of suicide according to the National Institutes for Mental Health: https://www.nimh.nih.gov/health/statistics/suicide.shtml} the unemployment rate, the share of population who are combat veterans, and the share of the population served by military/VA health insurance. 
+
+```{r, echo=FALSE , fig.align='center'} 
+data_df <- read.table("D:/Economics/Data/Medicaid Insurance and Suicide/medicaid_data_df")
+model_iv_basic <-  log(suicide_total) ~ medicaid_rate + private_rate + m_older_age_rate + f_mid_age_rate  | se1_v4w + private_rate  + m_older_age_rate + f_mid_age_rate 
+iv_reg_basic <- iv_robust(data = data_df , 
+                    formula = model_iv_basic ,
+                    se_type = "stata" , 
+                    fixed_effects = ~STATEFIP + YEAR ,
+                    clusters = STATEFIP 
+)
+model_iv_ue <-  log(suicide_total) ~ medicaid_rate + private_rate + ue_rate + m_older_age_rate + f_mid_age_rate | se1_v4w + private_rate + ue_rate + m_older_age_rate + f_mid_age_rate
+iv_reg_ue <- iv_robust(data = data_df , 
+                    formula = model_iv_ue ,
+                    se_type = "stata" , 
+                    fixed_effects = ~STATEFIP + YEAR ,
+                    clusters = STATEFIP
+)
+model_iv_vets <- log(suicide_total) ~ medicaid_rate + private_rate + ue_rate + vet_rate + militcare_rate + m_older_age_rate + f_mid_age_rate | se1_v4w + private_rate + ue_rate + vet_rate + militcare_rate + m_older_age_rate + f_mid_age_rate
+iv_reg_vets <- iv_robust(data = data_df , 
+                    formula = model_iv_vets ,
+                    se_type = "stata" , 
+                    fixed_effects = ~STATEFIP + YEAR ,
+                    clusters = STATEFIP
+)
+results_tbl <- huxreg('Basic' = iv_reg_basic, '+ Unemployment' = iv_reg_ue, '+ Veterans' = iv_reg_vets, stars = c(`*` = 0.1, `**` = 0.05, `***` = 0.01), statistics = c('N' = 'nobs') , coefs = c('Medicaid Rate' = 'medicaid_rate' , 'Private Rate' = 'private_rate' , 'Pct Men (Age 45+)' = 'm_older_age_rate' , 'Pct Women (Age 45-55)' = 'f_mid_age_rate' , 'Unemployment Rate' = 'ue_rate' , 'Pct Veterans' = 'vet_rate' , 'Military/VA' = 'militcare_rate') , error_pos='right')
+
+results_tbl %>% 
+  theme_article %>% set_background_color(1:nrow(results_tbl) , evens, grey(.95)) %>% set_top_border(final(), 1, 1) %>% set_caption('IV Results')
+```
+
+In the specification with the greatest number of controls, the treatment effect of a given percentage point Medicaid expansion in the 2001-2009 rounds was about a 1.5\% drop in the number of suicides.
+
+# Discussion and Futher Research
+
+While the preliminary round of results is encouraging, there is much further work to be done. The panel being used in this analysis depends on the measure of simulated Medicaid eligibility constructed by McInerney et. al. (2017), which only exists for the years 2001-2009. Ideally I could use a simulated eligibility measure that takes into account the changes induced by the ACA round of expansions, and offers more identifying variation on the states that expanded vs. states which chose not to, on account of the *National Federation of Independent Business v. Sebelius, 567 U.S. 519 (2012)* ruling. Trying to find (or construct) such a measure, and identify the causal impact of Medicaid expansions over the entire extended 2001-2017 panel, represents the next step in this investigation.
