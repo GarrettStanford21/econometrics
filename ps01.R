@@ -44,7 +44,7 @@ means_nsw_tbl <- nsw_df %>% group_by(treat) %>% summarise( means = mean(re78))
 means_nsw_tbl[2,2] - means_nsw_tbl[1,2] # The same as our treatment estimate from regression in number 3!
 
 ## HW Number 9
-nsw_treat_df <- nsw_df %>% filter(treat==1)
+nsw_treat_df <- nsw_df %>% filter(treat==1) # Ed wants us to take out the untreated from NSW and bind with PSID.
 mixed_tbl <- bind_rows( nsw_treat_df , psid_df ) 
 
 ## HW Number 10
@@ -130,15 +130,11 @@ block_ntreated <- new_df %>% group_by(block) %>% filter(treat==0) %>%
 block_n <- block_n %>% bind_cols(block_treated) %>% bind_cols(block_ntreated) %>% 
   select( -c( block1, block2) ) %>% mutate(block_wgt = N_blk/N_df) # Dataframe with the group sizes and the weights we will need
 
-inc_means_block  <- new_df %>% group_by(block, treat) %>% summarise(mean = mean(re78)) # Getting treatment means in blocks
-treat_inc_block  <- inc_means_block %>% filter(treat==1)  %>% rename(treat_re78  = mean) 
-ntreat_inc_block <- inc_means_block %>% filter(treat==0)  %>% rename(ntreat_re78 = mean)
+blocking_df <- new_df %>% group_by(block, treat) %>% summarise( mean = mean(re78)) %>% summarise(diff = diff(mean)) %>% 
+  bind_cols(block_n) # Creating the block treatment mean diffs and binding with group sizes and constructed weights.
 
-blocking_df <- block_n %>% bind_cols(treat_inc_block , ntreat_inc_block) %>% 
-  select( -c(block1 , treat , block2 , treat1)) %>% 
-  mutate(diff_means = treat_re78 - ntreat_re78 , tau_block = diff_means*block_wgt) # Everything ready for estimating
-tau <- blocking_df %>% summarise(tau_hat = sum(tau_block)) %>% as.numeric # Estimates
-tau
+tau <- blocking_df %>% mutate(tau_wgt = diff*block_wgt) %>% summarise(tau = sum(tau_wgt)) %>% as.numeric()
+tau # PS block estimate
 
 # Double robustness
 
