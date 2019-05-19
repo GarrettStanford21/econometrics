@@ -64,15 +64,20 @@ covariates_ntreat <-  mixed_tbl %>% filter(treat==0) %>% select(age , education 
 
 ## HW Number 13
 model_n11 <- treat ~ re78 + age + black + hispanic
-logit <- glm(data = mixed_tbl , formula = model_n11 , family = binomial)
-pro_scores <- enframe(logit$fitted.values)  %>% bind_cols(mixed_tbl) %>% rename(p.score = value)
+logit <- glm(data = mixed_tbl , formula = model_n11 , family = binomial) # Logit regression for propensity scores
+pro_scores <- enframe(logit$fitted.values)  %>% bind_cols(mixed_tbl) %>% rename(p.score = value) # Propensity scores
 
-ps_treat <- pro_scores %>% filter( treat==1 )
+ps_treat <- pro_scores %>% filter( treat==1 ) # Want to get the lowest propensity score that any of the treated have
 min_ps_treat <- min( ps_treat$p.score )
-overlap_treat <- pro_scores %>% filter( p.score > min_ps_treat & treat==0 )
-ps_untreat <- pro_scores %>% filter( treat==0 )
+overlap_treat <- pro_scores %>% filter( p.score > min_ps_treat & treat==0 ) # Only look at untreated with at least that p-score
+ps_untreat <- pro_scores %>% filter( treat==0 ) # Similarly get the highest propensity score that a nontreated has
 max_ps_untreat <- max( ps_untreat$p.score )
-new_df <- pro_scores %>% filter( p.score < max_ps_untreat & treat==1 ) %>% bind_rows(overlap_treat)
+
+##
+## IMPORTANT! If you want to mess with enforcing overlap using P scores as Ed did, this next line is where to adjust!
+## 
+
+new_df <- pro_scores %>% filter( p.score < max_ps_untreat & treat==1 ) %>% bind_rows(overlap_treat) # Data should have no overlap now
 
 ggplot(data = new_df , aes( x = p.score , fill = as.factor(treat) , color = as.factor(treat) )) +
   geom_histogram( binwidth = 0.06 , alpha = 0.6)
@@ -115,6 +120,20 @@ block_ntreated <- new_df %>% group_by(block) %>% filter(treat==0) %>%
 
 block_n <- block_n %>% bind_cols(block_treated) %>% bind_cols(block_ntreated) %>% 
   select( -c( block1, block2) ) %>% mutate(block_wgt = N_blk/N_df) # Dataframe with the group sizes and the weights we will need
+
+inc_means_block  <- new_df %>% group_by(block, treat) %>% summarise(mean = mean(re78)) # Getting treatment means in blocks
+treat_inc_block  <- inc_means_block %>% filter(treat==1)  %>% rename(treat_re78  = mean) 
+ntreat_inc_block <- inc_means_block %>% filter(treat==0)  %>% rename(ntreat_re78 = mean)
+
+blocking_df <- block_n %>% bind_cols(treat_inc_block , ntreat_inc_block) %>% 
+  select( -c(block1 , treat , block2 , treat1)) %>% 
+  mutate(diff_means = treat_re78 - ntreat_re78 , tau_block = diff_means*block_wgt) # Everything ready for estimating
+tau <- blocking_df %>% summarise(tau_hat = sum(tau_block)) %>% as.numeric # Estimates
+tau
+
+# Double robustness
+
+
 
 ## HW Number 14
 
