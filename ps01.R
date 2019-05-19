@@ -44,7 +44,8 @@ means_nsw_tbl <- nsw_df %>% group_by(treat) %>% summarise( means = mean(re78))
 means_nsw_tbl[2,2] - means_nsw_tbl[1,2] # The same as our treatment estimate from regression in number 3!
 
 ## HW Number 9
-mixed_tbl <- bind_rows( nsw_df , psid_df ) 
+nsw_treat_df <- nsw_df %>% filter(treat==1)
+mixed_tbl <- bind_rows( nsw_treat_df , psid_df ) 
 
 ## HW Number 10
 means_mix_tbl <- mixed_tbl %>% group_by(treat) %>% summarise( means = mean( re78 ) ) # Table with means of treat/untreat
