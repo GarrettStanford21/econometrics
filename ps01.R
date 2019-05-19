@@ -63,7 +63,7 @@ covariates_treat <- mixed_tbl %>% filter(treat==1) %>% select(age , education , 
 covariates_ntreat <-  mixed_tbl %>% filter(treat==0) %>% select(age , education , black , hispanic , married, nodegree)
 
 ## HW Number 13
-model_n11 <- treat ~ age + education + black + hispanic + married + nodegree
+model_n11 <- treat ~ age + education + black + hispanic + married + nodegree # Six covariates Ed mentions in 11 that I assume he wants us using
 logit <- glm(data = mixed_tbl , formula = model_n11 , family = binomial) # Logit regression for propensity scores
 pro_scores <- enframe(logit$fitted.values)  %>% bind_cols(mixed_tbl) %>% rename(p.score = value) # Propensity scores
 
