@@ -63,8 +63,8 @@ covariates_treat <- mixed_tbl %>% filter(treat==1) %>% select(age , education , 
 covariates_ntreat <-  mixed_tbl %>% filter(treat==0) %>% select(age , education , black , hispanic , married, nodegree)
 
 ## HW Number 13
-model_n11 <- treat ~ age + education + black + hispanic + married + nodegree # Six covariates Ed mentions in 11 that I assume he wants us using
-logit <- glm(data = mixed_tbl , formula = model_n11 , family = binomial) # Logit regression for propensity scores
+model_n13 <- treat ~ age + education + black + hispanic + married + nodegree # Six covariates Ed mentions in 11 that I assume he wants us using
+logit <- glm(data = mixed_tbl , formula = model_n13 , family = binomial) # Logit regression for propensity scores
 pro_scores <- enframe(logit$fitted.values)  %>% bind_cols(mixed_tbl) %>% rename(p.score = value) # Propensity scores
 
 ps_treat <- pro_scores %>% filter( treat==1 ) # Want to get the lowest propensity score that any of the treated have
@@ -87,30 +87,39 @@ lm_robust(data = new_df ,
 
 lm_robust(data = new_df , 
           formula = re78 ~ p.score*treat + treat + p.score) %>% tidy
+##
+## If you choose your own threshold for p scores to enforce overlap, use sequence below to easily create blocks!!
+## 
+
+block_min <- 0.05
+block_max <- 0.45
+block_size <- (block_max - block_min) / 20
+block_bins <- seq(from = block_min , to = block_max , by = block_size)
 
 new_df <- new_df %>% mutate( block = case_when(
-                               p.score > 0 & p.score<= (1/20)*0.5 ~ 1 ,
-                               p.score > (1/20)*0.5 & p.score<= (2/20)*0.5 ~ 2 ,
-                               p.score > (2/20)*0.5 & p.score<= (3/20)*0.5 ~ 3 ,
-                               p.score > (3/20)*0.5 & p.score<= (4/20)*0.5 ~ 4 ,
-                               p.score > (4/20)*0.5 & p.score<= (5/20)*0.5 ~ 5 ,
-                               p.score > (5/20)*0.5 & p.score<= (6/20)*0.5 ~ 6 ,
-                               p.score > (6/20)*0.5 & p.score<= (7/20)*0.5 ~ 7 ,
-                               p.score > (7/20)*0.5 & p.score<= (8/20)*0.5 ~ 8 ,
-                               p.score > (8/20)*0.5 & p.score<= (9/20)*0.5 ~ 9 ,
-                               p.score > (9/20)*0.5 & p.score<= (10/20)*0.5 ~ 10 ,
-                               p.score > (10/20)*0.5 & p.score<= (11/20)*0.5 ~ 11 ,
-                               p.score > (11/20)*0.5 & p.score<= (12/20)*0.5 ~ 12,
-                               p.score > (12/20)*0.5 & p.score<= (13/20)*0.5 ~ 13,
-                               p.score > (13/20)*0.5 & p.score<= (14/20)*0.5 ~ 14,
-                               p.score > (14/20)*0.5 & p.score<= (15/20)*0.5 ~ 15,
-                               p.score > (15/20)*0.5 & p.score<= (16/20)*0.5 ~ 16,
-                               p.score > (16/20)*0.5 & p.score<= (17/20)*0.5 ~ 17,
-                               p.score > (17/20)*0.5 & p.score<= (18/20)*0.5 ~ 18,
-                               p.score > (18/20)*0.5 & p.score<= (19/20)*0.5 ~ 19,
-                               p.score > (19/20)*0.5 & p.score<= 0.5 ~ 20
+                               p.score > block_bins[1]  & p.score<= block_bins[2]  ~ 1  ,
+                               p.score > block_bins[2]  & p.score<= block_bins[3]  ~ 2  , 
+                               p.score > block_bins[3]  & p.score<= block_bins[4]  ~ 3  , 
+                               p.score > block_bins[4]  & p.score<= block_bins[5]  ~ 4  , 
+                               p.score > block_bins[5]  & p.score<= block_bins[6]  ~ 5  ,
+                               p.score > block_bins[6]  & p.score<= block_bins[7]  ~ 6  ,
+                               p.score > block_bins[7]  & p.score<= block_bins[8]  ~ 7  ,
+                               p.score > block_bins[8]  & p.score<= block_bins[9]  ~ 8  ,
+                               p.score > block_bins[9]  & p.score<= block_bins[10] ~ 9  ,
+                               p.score > block_bins[10] & p.score<= block_bins[11] ~ 10 ,
+                               p.score > block_bins[11] & p.score<= block_bins[12] ~ 11 ,
+                               p.score > block_bins[12] & p.score<= block_bins[13] ~ 12 ,
+                               p.score > block_bins[13] & p.score<= block_bins[14] ~ 13 ,
+                               p.score > block_bins[14] & p.score<= block_bins[15] ~ 14 ,
+                               p.score > block_bins[15] & p.score<= block_bins[16] ~ 15 ,
+                               p.score > block_bins[16] & p.score<= block_bins[17] ~ 16 ,
+                               p.score > block_bins[17] & p.score<= block_bins[18] ~ 17 ,
+                               p.score > block_bins[18] & p.score<= block_bins[19] ~ 18 , 
+                               p.score > block_bins[19] & p.score<= block_bins[20] ~ 19 ,
+                               p.score > block_bins[20] & p.score<= block_bins[21] ~ 20
+  
                              ) 
-                            ) # Generates 20 equal size blocks. (Max P score is ~0.5) 
+                            ) # Generates 20 equal size blocks based on block_min & block_max & step size.
 N_df <- new_df %>% summarise(data_n = n()) %>% as.numeric
 block_n <- new_df %>% group_by(block) %>% summarise( grp_size = n() ) %>% rename( N_blk = grp_size) # Creates table of group sizes by block
 block_treated  <- new_df %>% group_by(block) %>% filter(treat==1) %>% 
@@ -133,8 +142,23 @@ tau
 
 # Double robustness
 
-block_1 <- new_df %>% filter( block==1 )
-lm_robust()
+model_n13f <- re78 ~ age + education + black + hispanic + married + nodegree + treat
+double_robust_coefs <- c(rep(0,20))
+
+for( i in 1:20 ) {
+  
+block_i <- new_df %>% filter( block == i )
+reg_block_i <- lm_robust( data = block_i , formula = model_n13f )
+d_robust_coefs[i] <- coef(reg_block_i)[8]
+double_robust_coefs[i] <- d_robust_coefs[[i]]
+
+}
+
+t_k <- enframe(double_robust_coefs) %>% rename(block = name , tau_k = value) %>% bind_cols(block_n) %>% 
+  mutate(weighted_effect = tau_k*block_wgt) %>% select(-c(block1))
+
+t_block <- t_k %>% summarise(tau = sum(weighted_effect)) %>% as.numeric
+t_block
 
 ## HW Number 14
 
