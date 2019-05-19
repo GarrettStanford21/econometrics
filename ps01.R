@@ -63,7 +63,7 @@ covariates_treat <- mixed_tbl %>% filter(treat==1) %>% select(age , education , 
 covariates_ntreat <-  mixed_tbl %>% filter(treat==0) %>% select(age , education , black , hispanic , married, nodegree)
 
 ## HW Number 13
-model_n11 <- treat ~ re78 + age + black + hispanic
+model_n11 <- treat ~ age + education + black + hispanic + married + nodegree
 logit <- glm(data = mixed_tbl , formula = model_n11 , family = binomial) # Logit regression for propensity scores
 pro_scores <- enframe(logit$fitted.values)  %>% bind_cols(mixed_tbl) %>% rename(p.score = value) # Propensity scores
 
@@ -77,10 +77,10 @@ max_ps_untreat <- max( ps_untreat$p.score )
 ## IMPORTANT! If you want to mess with enforcing overlap using P scores as Ed did, this next line is where to adjust!
 ## 
 
-new_df <- pro_scores %>% filter( p.score < max_ps_untreat & treat==1 ) %>% bind_rows(overlap_treat) # Data should have no overlap now
+new_df <- pro_scores %>% filter( p.score > 0.05 & p.score < 0.45 ) 
 
 ggplot(data = new_df , aes( x = p.score , fill = as.factor(treat) , color = as.factor(treat) )) +
-  geom_histogram( binwidth = 0.06 , alpha = 0.6)
+  geom_histogram( binwidth = 0.05 , alpha = 0.6)
 
 lm_robust(data = new_df , 
           formula = re78 ~ p.score + treat) %>% tidy
@@ -133,7 +133,8 @@ tau
 
 # Double robustness
 
-
+block_1 <- new_df %>% filter( block==1 )
+lm_robust()
 
 ## HW Number 14
 
