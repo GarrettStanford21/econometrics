@@ -167,27 +167,13 @@ bias <- tidy(c(rep(1,1))) # Identifier for biased regression
 unbias <- tidy(c(rep(0,1))) # Identifier for unbiased regression
 
 # Functions
-sim_function_v4 <- function( i , n=50 , v_u = 4 , sd_e = 3) {
-
-  i_sim_model <- tibble( 
-    e = rnorm( n , 0 , sd_e ) , 
-    u = rnorm( n , 0 , sqrt(v_u) ) ,
-    ability = rnorm(n , 0, sqrt(10)) ,
-    education = 10 + 2*ability + u, 
-    wage = 10 + 5*education + 5*ability + e
-  )
-  
-  model_ub <- lm_robust( data = i_sim_model , formula = wage ~ education + ability ) %>% tidy %>% filter(term == 'education' ) %>% select(estimate) %>% bind_cols(unbias)
-  model_b <- lm_robust( data = i_sim_model , formula = wage ~ education ) %>% tidy %>% filter(term == 'education' ) %>% select(estimate) %>% bind_cols(bias)
-  bind_rows(model_ub , model_b)                   
-} # Create + estimate data for residual variance of education == 4
-sim_function_v6 <- function( i , n=50 , v_u = 6 , sd_e = 3) {
+sim_function_b1 <- function( i , n=50 , x_beta = 1 , v_u = 2 , sd_e = 3) {
   
   i_sim_model <- tibble( 
     e = rnorm( n , 0 , sd_e ) , 
     u = rnorm( n , 0 , sqrt(v_u) ) ,
     ability = rnorm(n , 0, sqrt(10)) ,
-    education = 10 + 2*ability + u, 
+    education = 10 + x_beta*ability + u, 
     wage = 10 + 5*education + 5*ability + e
   )
   
@@ -195,13 +181,27 @@ sim_function_v6 <- function( i , n=50 , v_u = 6 , sd_e = 3) {
   model_b <- lm_robust( data = i_sim_model , formula = wage ~ education ) %>% tidy %>% filter(term == 'education' ) %>% select(estimate) %>% bind_cols(bias)
   bind_rows(model_ub , model_b)                   
 } # Create + estimate data for residual variance of education == 6
-sim_function_v2 <- function( i , n=50 , v_u = 2 , sd_e = 3) {
+sim_function_b2 <- function( i , n=50 , x_beta = 2 , v_u = 2 , sd_e = 3) {
+
+  i_sim_model <- tibble( 
+    e = rnorm( n , 0 , sd_e ) , 
+    u = rnorm( n , 0 , sqrt(v_u) ) ,
+    ability = rnorm(n , 0, sqrt(10)) ,
+    education = 10 + x_beta*ability + u, 
+    wage = 10 + 5*education + 5*ability + e
+  )
+  
+  model_ub <- lm_robust( data = i_sim_model , formula = wage ~ education + ability ) %>% tidy %>% filter(term == 'education' ) %>% select(estimate) %>% bind_cols(unbias)
+  model_b <- lm_robust( data = i_sim_model , formula = wage ~ education ) %>% tidy %>% filter(term == 'education' ) %>% select(estimate) %>% bind_cols(bias)
+  bind_rows(model_ub , model_b)                   
+} # Create + estimate data for residual variance of education == 4
+sim_function_b4 <- function( i , n=50 , x_beta = 4 , v_u = 2 , sd_e = 3) {
   
   i_sim_model <- tibble( 
     e = rnorm( n , 0 , sd_e ) , 
     u = rnorm( n , 0 , sqrt(v_u) ) ,
     ability = rnorm(n , 0, sqrt(10)) ,
-    education = 10 + 2*ability + u, 
+    education = 10 + x_beta*ability + u, 
     wage = 10 + 5*education + 5*ability + e
   )
   
@@ -214,45 +214,47 @@ sim_function_v2 <- function( i , n=50 , v_u = 2 , sd_e = 3) {
 
 set.seed(414) 
 
-sim_list_v4 <- map(1:1e3 , sim_function_v4) # Simulates 1k times
-sim_list_v6 <- map(1:1e3 , sim_function_v6) # Simulates 1k times
-sim_list_v2 <- map(1:1e3 , sim_function_v2) # Simulates 1k times
+sim_list_b1 <- map(1:1e3 , sim_function_b1) # Simulates 1k times
+sim_list_b2 <- map(1:1e3 , sim_function_b2) # Simulates 1k times
+sim_list_b4 <- map(1:1e3 , sim_function_b4) # Simulates 1k times
 
-sim_df_v4 <- bind_rows(sim_list_v4) %>% rename(bias = x)
-sim_df_v6 <- bind_rows(sim_list_v6) %>% rename(bias = x)
-sim_df_v2 <- bind_rows(sim_list_v2) %>% rename(bias = x)
+sim_df_b1 <- bind_rows(sim_list_b1) %>% rename(bias = x)
+sim_df_b2 <- bind_rows(sim_list_b2) %>% rename(bias = x)
+sim_df_b4 <- bind_rows(sim_list_b4) %>% rename(bias = x)
 
+mean_bias_b1 <- sim_df_b1 %>% filter(bias==1) %>% summarise(mean = mean(estimate)) 
 # Graphs
 
-var_4_graph <- ggplot(data = sim_df_v4 , aes( x = estimate , fill = as.factor(bias) , color = as.factor(bias))) + 
+b1_graph <- ggplot(data = sim_df_b1 , aes( x = estimate , fill = as.factor(bias) , color = as.factor(bias))) + 
   geom_density( stat = 'density' , alpha = 0.6 ) +
   geom_vline(xintercept = 5 , color = 'red' , size = 1) + 
+  geom_vline(xintercept = 9.164869 , color = 'red' , size = 1 , linetype = 2) + 
   ggtitle("Omitting Ability from Wage Equation (Blue is Biased Model)") +
   scale_x_continuous(name = 'Estimate of Education on Wage') +
   scale_y_continuous(name = 'Density') + 
   theme( legend.title = element_blank()) 
 
-var_6_graph <- ggplot(data = sim_df_v6 , aes( x = estimate , fill = as.factor(bias) , color = as.factor(bias))) + 
+b2_graph <- ggplot(data = sim_df_b2 , aes( x = estimate , fill = as.factor(bias) , color = as.factor(bias))) + 
   geom_density( stat = 'density' , alpha = 0.6 ) +
   geom_vline(xintercept = 5 , color = 'red' , size = 1) + 
+  geom_vline(xintercept = 9.164869 , color = 'red' , size = 1 , linetype = 2) + 
   ggtitle("Omitting Ability from Wage Equation (Blue is Biased Model)") +
   scale_x_continuous(name = 'Estimate of Education on Wage') +
   scale_y_continuous(name = 'Density') + 
   theme( legend.title = element_blank()) 
 
 
-var_2_graph <- ggplot(data = sim_df_v2 , aes( x = estimate , fill = as.factor(bias) , color = as.factor(bias))) + 
+b4_graph <- ggplot(data = sim_df_b4 , aes( x = estimate , fill = as.factor(bias) , color = as.factor(bias))) + 
   geom_density( stat = 'density' , alpha = 0.6 ) +
   geom_vline(xintercept = 5 , color = 'red' , size = 1) + 
+  geom_vline(xintercept = 9.164869 , color = 'red' , size = 1 , linetype = 2) + 
   ggtitle("Omitting Ability from Wage Equation (Blue is Biased Model)") +
   scale_x_continuous(name = 'Estimate of Education on Wage') +
   scale_y_continuous(name = 'Density') + 
   theme( legend.title = element_blank()) 
 
-# Plots of estimates with different educ.  resid. variances. 
-# Higher resid. variance on educ. corresponds to less correlation w ability since education has higher variation indep-
-# endent of ability. Lower resid. variance means more of educ. variation is driven by variation in ability.
 
-var_4_graph # When residual variance on education is 4. 
-var_2_graph # When residual variance on education is 2.
-var_6_graph # When residual variance on education is 6.
+b1_graph 
+b2_graph 
+b4_graph 
+
