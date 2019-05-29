@@ -73,9 +73,40 @@ bind_rows( w1_reg , w2_reg , multi_reg , w1_iv , w2_iv )
 set.seed(414)
 sim_df <- map_dfr(1:it_count , sim_function) %>% arrange(model)
 
+sim_df$model <- factor( sim_df$model , 
+                        levels = c(1 , 2 , 3 , 4 , 5) ,
+                        labels = c("OLS (w1)" , "OLS (w2)" , "OLS (w1,w2)" , "IV (w1|w2)" , "IV(w2|w1)"))
 
+# w1 Estimate Plot
 
-ggplot( data = sim_df , 
-        aes( x = estimate ,
-             color = model ))
+ggplot( ) + 
+  geom_density ( data = sim_df %>% filter(term=="w1") , 
+                 stat = 'density' , 
+                 aes(x = estimate , 
+                     group = as.factor(model) , 
+                     fill = as.factor(model) , 
+                     color=as.factor(model) ) ,
+                 alpha=0.5
+                 ) +
+  geom_vline( xintercept = 7 , 
+              linetype = 2 , 
+              color='red') + 
+  scale_x_continuous(name='w1 Estimate') + 
+  scale_y_continuous((name = 'Density'))
 
+# w2 Estimate Plot
+
+ggplot( ) + 
+  geom_density ( data = sim_df %>% filter(term=="w2") , 
+                 stat = 'density' , 
+                 aes(x = estimate , 
+                     group = as.factor(model) , 
+                     fill = as.factor(model) , 
+                     color=as.factor(model) ) ,
+                 alpha=0.5
+  ) +
+  geom_vline( xintercept = 7 , 
+              linetype = 2 , 
+              color='red') + 
+  scale_x_continuous(name='w2 Estimate') + 
+  scale_y_continuous((name = 'Density'))
