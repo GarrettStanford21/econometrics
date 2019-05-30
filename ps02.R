@@ -92,7 +92,8 @@ ggplot( ) +
               linetype = 2 , 
               color='red') + 
   scale_x_continuous(name='w1 Estimate') + 
-  scale_y_continuous((name = 'Density'))
+  scale_y_continuous((name = 'Density')) +
+  theme(panel.background = element_blank() )
 
 # w2 Estimate Plot
 
@@ -109,7 +110,8 @@ ggplot( ) +
               linetype = 2 , 
               color='red') + 
   scale_x_continuous(name='w2 Estimate') + 
-  scale_y_continuous((name = 'Density'))
+  scale_y_continuous((name = 'Density')) +
+  theme(panel.background = element_blank() )
 
 # introducing 'selection bias' into X
 
@@ -169,7 +171,8 @@ ggplot( ) +
               linetype = 2 , 
               color='red') + 
   scale_x_continuous(name='w1 Estimate') + 
-  scale_y_continuous((name = 'Density'))
+  scale_y_continuous((name = 'Density')) + 
+  theme( panel.background = element_blank())
 
 # w2 Estimate Plot
 
@@ -186,5 +189,6 @@ ggplot( ) +
               linetype = 2 , 
               color='red') + 
   scale_x_continuous(name='w2 Estimate') + 
-  scale_y_continuous((name = 'Density'))
+  scale_y_continuous((name = 'Density')) + 
+  theme( panel.background = element_blank())
 
