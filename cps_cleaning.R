@@ -3,12 +3,11 @@ p_load( ipumsr,
         broom ,
         haven ,
         tidyverse ,
-        estimatr ,
-        stargazer)
+        estimatr )
 
 # Data Gathering and Cleaning
 
-ddi <- read_ipums_ddi("D:/Economics/Data/CPS Data/cps_00024.xml")
+ddi <- read_ipums_ddi("cps_00024.xml")
 data <- read_ipums_micro(ddi)
 
 
@@ -24,28 +23,34 @@ asec_df <- data  %>% mutate(HFLAG = replace_na(HFLAG, 1)) %>% filter( ASECFLAG =
 asec_df <- asec_df %>% mutate( woman = ifelse(SEX==2 , 1 , 0) ,
                                prime_age = ifelse(AGE > 24 & AGE < 66, 1, 0) ,
                                m_older_age = ifelse(AGE > 44 & SEX==1, 1, 0) ,
-                               f_mid_age = ifelse(AGE > 44 & age < 56 & SEX==2, 1, 0) ,
+                               f_mid_age = ifelse(AGE > 44 & AGE < 56 & SEX==2, 1, 0) ,
                                private = ifelse(COVERPI==2, 1, 0) , 
                                public = ifelse(HIMCAID==2 | HIMCARE==2 | HICHAMP==2, 1, 0), 
                                medicaid = ifelse(HIMCAID==2, 1, 0) ,
                                medicare = ifelse(HIMCARE==2, 1, 0) ,
-                               militcare = ifelse(HICHAMP==2, 1, 0) ,
-                               unemployed = ifelse(EMPSTAT==20|EMPSTAT==21|EMPSTAT==22, 1, 0) , 
+                               militcare = ifelse(HICHAMP==2, 1, 0) , 
                                combat_vet = ifelse(VETSTAT==2, 1, 0) , 
-                               ilf = ifelse(LABFORCE==2, 1, 0) )
+                               unemployed = ifelse(EMPSTAT==20|EMPSTAT==21|EMPSTAT==22, 1, 0) ,
+                               ilf = ifelse(LABFORCE==2, 1, 0) ,
+                               emp_univ = ifelse(LABFORCE>0 , 1 , 0) ,
+                               vet_univ = ifelse(VETSTAT>0 , 1 , 0) ,
+                               mcare_univ = ifelse(HIMCARE>0 , 1 , 0) )
 
 asec_df <- asec_df %>% mutate( woman_pop = woman*ASECWT ,
                                prime_age_pop = prime_age*ASECWT ,
-                               m_older_age_pop = older_age*ASECWT , 
+                               m_older_age_pop = m_older_age*ASECWT , 
                                f_mid_age_pop = f_mid_age*ASECWT ,
                                private_pop = private*ASECWT , 
                                public_pop = public*ASECWT ,
                                medicaid_pop = medicaid*ASECWT ,
                                medicare_pop = medicare*ASECWT ,
                                militcare_pop = militcare*ASECWT ,
-                               unemployed_pop = unemployed*ASECWT ,
                                vet_pop = combat_vet*ASECWT ,
-                               lfp = ilf*ASECWT )
+                               unemployed_pop = unemployed*ASECWT ,
+                               lfp = ilf*ASECWT ,
+                               emp_u = emp_univ*ASECWT ,
+                               vet_u = vet_univ*ASECWT ,
+                               mcare_u = mcare_univ*ASECWT )
 
 ## Collapsing by state/year
 
@@ -57,25 +62,29 @@ asec_st <- asec_df %>% group_by( STATEFIP ,  YEAR ) %>% summarise( population = 
                                                                    private = sum(private_pop) , 
                                                                    medicare=sum(medicare_pop) ,  
                                                                    medicaid=sum(medicaid_pop) , 
-                                                                   militcare = sum(militcare_pop) , 
-                                                                   unemployed = sum(unemployed_pop) , 
+                                                                   militcare = sum(militcare_pop) ,  
                                                                    combat_vets = sum(vet_pop) , 
-                                                                   lfp = sum(lfp) ) %>% arrange(YEAR)
+                                                                   unemployed = sum(unemployed_pop) ,
+                                                                   lfp = sum(lfp) ,
+                                                                   emp_pop = sum(emp_u) ,
+                                                                   vet_pop = sum(vet_u) ,
+                                                                   mcare_pop = sum(mcare_u)
+                                                                   ) %>% arrange(YEAR)
 
 asec_st <- asec_st %>% mutate( fem_rate = women / population , 
                                prime_rate = prime_age / population ,
-                               elder_rate = older_age / population , 
+                               m_older_rate = m_older_age / population ,
+                               f_mid_age_rate = f_mid_age / population ,
                                private_rate = private/ population ,
                                medicaid_rate = medicaid / population , 
-                               medicare_rate = medicare / population , 
+                               medicare_rate = medicare / mcare_pop , 
                                militcare_rate = militcare / population ,
-                               vet_rate = combat_vets / population ,
-                               lfpr = lfp / population ,
+                               vet_rate = combat_vets / vet_pop ,
+                               lfpr = lfp / emp_pop ,
                                ue_rate = unemployed / lfp )
 
-
 write.table(x = asec_st, 
-            file = "D:/Economics/Data/CPS Data/asec_st")
+            file = "D:/Economics/Data/CPS/asec_st")
 
 asec_st$STATEFIP <- factor(asec_st$STATEFIP ,
                            levels = c( 
