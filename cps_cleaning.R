@@ -2,11 +2,16 @@ library(pacman)
 p_load( ipumsr, 
         broom ,
         haven ,
+        dplyr , 
+        furrr ,
+        purrr , 
         tidyverse ,
-        estimatr )
+        estimatr ,
+        tictoc )
 
 # Data Gathering and Cleaning
 
+setwd("D:/Economics/Data/CPS")
 ddi <- read_ipums_ddi("cps_00024.xml")
 data <- read_ipums_micro(ddi)
 
@@ -16,72 +21,84 @@ data <- read_ipums_micro(ddi)
 
 # Annual Social and Economic Supplement (March Supplement)
 
-asec_df <- data  %>% mutate(HFLAG = replace_na(HFLAG, 1)) %>% filter( ASECFLAG == 1 & HFLAG ==1 ) # See https://cps.ipums.org/cps/three_eighths.shtml
+asec_df = data %>% mutate(HFLAG = replace_na(HFLAG, 1)) %>% filter( ASECFLAG == 1 & HFLAG ==1 ) # See https://cps.ipums.org/cps/three_eighths.shtml
 
 ## Insurance, Demographic, and employment Variables
 
-asec_df <- asec_df %>% mutate( woman = ifelse(SEX==2 , 1 , 0) ,
-                               prime_age = ifelse(AGE > 24 & AGE < 66, 1, 0) ,
-                               m_older_age = ifelse(AGE > 44 & SEX==1, 1, 0) ,
-                               f_mid_age = ifelse(AGE > 44 & AGE < 56 & SEX==2, 1, 0) ,
-                               private = ifelse(COVERPI==2, 1, 0) , 
-                               public = ifelse(HIMCAID==2 | HIMCARE==2 | HICHAMP==2, 1, 0), 
-                               medicaid = ifelse(HIMCAID==2, 1, 0) ,
-                               medicare = ifelse(HIMCARE==2, 1, 0) ,
-                               militcare = ifelse(HICHAMP==2, 1, 0) , 
-                               combat_vet = ifelse(VETSTAT==2, 1, 0) , 
-                               unemployed = ifelse(EMPSTAT==20|EMPSTAT==21|EMPSTAT==22, 1, 0) ,
-                               ilf = ifelse(LABFORCE==2, 1, 0) ,
-                               emp_univ = ifelse(LABFORCE>0 , 1 , 0) ,
-                               vet_univ = ifelse(VETSTAT>0 , 1 , 0) ,
-                               mcare_univ = ifelse(HIMCARE>0 , 1 , 0) )
+asec_df <- asec_df %>% mutate( i_woman = ifelse(SEX==2 , 1 , 0) ,
+                               i_prime_age = ifelse(AGE > 24 & AGE < 66, 1, 0) ,
+                               i_m_older_age = ifelse(AGE > 44 & SEX==1, 1, 0) ,
+                               i_f_mid_age = ifelse(AGE > 44 & AGE < 56 & SEX==2, 1, 0) ,
+                               i_private = ifelse(COVERPI==2, 1, 0) , 
+                               i_public = ifelse(HIMCAID==2 | HIMCARE==2 | HICHAMP==2, 1, 0), 
+                               i_medicaid = ifelse(HIMCAID==2, 1, 0) ,
+                               i_medicare = ifelse(HIMCARE==2, 1, 0) ,
+                               i_militcare = ifelse(HICHAMP==2, 1, 0) , 
+                               i_combat_vet = ifelse(VETSTAT==2, 1, 0) , 
+                               i_unemployed = ifelse(EMPSTAT==20|EMPSTAT==21|EMPSTAT==22, 1, 0) ,
+                               i_ilf = ifelse(LABFORCE==2, 1, 0) ,
+                               i_emp = ifelse(LABFORCE>0 , 1 , 0) ,
+                               i_vet = ifelse(VETSTAT>0 , 1 , 0) ,
+                               i_mcare = ifelse(HIMCARE>0 , 1 , 0) )
 
-asec_df <- asec_df %>% mutate( woman_pop = woman*ASECWT ,
-                               prime_age_pop = prime_age*ASECWT ,
-                               m_older_age_pop = m_older_age*ASECWT , 
-                               f_mid_age_pop = f_mid_age*ASECWT ,
-                               private_pop = private*ASECWT , 
-                               public_pop = public*ASECWT ,
-                               medicaid_pop = medicaid*ASECWT ,
-                               medicare_pop = medicare*ASECWT ,
-                               militcare_pop = militcare*ASECWT ,
-                               vet_pop = combat_vet*ASECWT ,
-                               unemployed_pop = unemployed*ASECWT ,
-                               lfp = ilf*ASECWT ,
-                               emp_u = emp_univ*ASECWT ,
-                               vet_u = vet_univ*ASECWT ,
-                               mcare_u = mcare_univ*ASECWT )
 
 ## Collapsing by state/year
 
-asec_st <- asec_df %>% group_by( STATEFIP ,  YEAR ) %>% summarise( population = sum(ASECWT) ,
-                                                                   women = sum(woman_pop) , 
-                                                                   prime_age = sum(prime_age_pop) , 
-                                                                   m_older_age = sum(m_older_age_pop) , 
-                                                                   f_mid_age = sum(f_mid_age_pop) , 
-                                                                   private = sum(private_pop) , 
-                                                                   medicare=sum(medicare_pop) ,  
-                                                                   medicaid=sum(medicaid_pop) , 
-                                                                   militcare = sum(militcare_pop) ,  
-                                                                   combat_vets = sum(vet_pop) , 
-                                                                   unemployed = sum(unemployed_pop) ,
-                                                                   lfp = sum(lfp) ,
-                                                                   emp_pop = sum(emp_u) ,
-                                                                   vet_pop = sum(vet_u) ,
-                                                                   mcare_pop = sum(mcare_u)
-                                                                   ) %>% arrange(YEAR)
+collapse_function_pay = function( i ){
+  pay_df_i = asec_df %>% filter(YEAR == i , INCWAGE < 9999998 ) %>% group_by(STATEFIP , YEAR ) %>% summarise( pay_avg = weighted.mean(INCWAGE , w = ASECWT) )
+}
+collapse_function_hrs = function( i ){
+  hrs_df_i = asec_df %>% filter(YEAR == i , UHRSWORKLY < 999 ) %>% group_by(STATEFIP , YEAR ) %>% summarise( hrs_avg = weighted.mean(UHRSWORKLY , w = ASECWT) )
+  }
+collapse_function_lf1 = function(i){
+  asec_lf1_i = asec_df %>% filter(AGE>13 & YEAR==i) %>% group_by( STATEFIP , YEAR ) %>% summarise( ilf = weighted.mean(LABFORCE==2 , w = ASECWT ),
+                                                                                                   unemployment = weighted.mean(EMPSTAT==20|EMPSTAT==21|EMPSTAT==22 , w = ASECWT )
+  )
+}
+collapse_function_lf = function(i){
+  asec_lf_i = asec_df %>% filter(AGE>14 & YEAR==i) %>% group_by( STATEFIP , YEAR ) %>% summarise( ilf = weighted.mean(LABFORCE==2 , w = ASECWT ),
+                                                                                                  unemployment = weighted.mean(EMPSTAT==20|EMPSTAT==21|EMPSTAT==22 , w = ASECWT )
+  ) 
+}
+collapse_function_vet1 = function(i){
+  asec_vet1_i = asec_df %>% filter(AGE>14 & YEAR==i) %>% group_by( STATEFIP , YEAR ) %>% summarise( vet = weighted.mean( VETSTAT==2 , w = ASECWT ))
+  
+}
+collapse_function_vet = function(i){
+  asec_vet_i = asec_df %>% filter(AGE>16 & YEAR==i) %>% group_by( STATEFIP , YEAR ) %>% summarise( vet = weighted.mean( VETSTAT==2 , w = ASECWT ))
+  
+}
+collapse_function_care = function(i){
+  asec_care_i = asec_df %>% filter(AGE>14 & YEAR==i) %>% group_by( STATEFIP , YEAR ) %>% summarise( medicare = weighted.mean(HIMCARE==2 , w = ASECWT ) )
+  
+}
+collapse_function_pop = function(i){
+  asec_pop_i = asec_df %>% filter(YEAR==i) %>% 
+    group_by( STATEFIP ,  YEAR ) %>% summarise( population = sum(ASECWT) ,
+                                                women = weighted.mean(SEX==2 , w = ASECWT) , 
+                                                prime_age_pop = weighted.mean(AGE > 24 & AGE < 66 , w = ASECWT) , 
+                                                m_older_age_pop = weighted.mean(AGE > 44 & SEX==1 , w = ASECWT) , 
+                                                f_mid_age = weighted.mean(AGE > 44 & AGE < 56 & SEX==2 , w = ASECWT) , 
+                                                private = weighted.mean(COVERPI==2 , w = ASECWT) ,
+                                                medicaid = weighted.mean(HIMCAID==2, w = ASECWT)  ,
+                                                militcare = weighted.mean(HICHAMP==2 , w = ASECWT ) 
+    )
+}
 
-asec_st <- asec_st %>% mutate( fem_rate = women / population , 
-                               prime_rate = prime_age / population ,
-                               m_older_rate = m_older_age / population ,
-                               f_mid_age_rate = f_mid_age / population ,
-                               private_rate = private/ population ,
-                               medicaid_rate = medicaid / population , 
-                               medicare_rate = medicare / mcare_pop , 
-                               militcare_rate = militcare / population ,
-                               vet_rate = combat_vets / vet_pop ,
-                               lfpr = lfp / emp_pop ,
-                               ue_rate = unemployed / lfp )
+tic()
+pay_df = map_dfr(1977:2018 , collapse_function_pay )
+hrs_df = map_dfr(1977:2018 , collapse_function_hrs )
+test_df = pay_df %>% bind_cols( hrs_df ) %>% select( -STATEFIP1 , -YEAR1)
+asec_lf1 = map_dfr(1977:1989 , collapse_function_lf1 )
+asec_lf = map_dfr(1990:2018 , collapse_function_lf) %>% bind_rows(asec_lf1) %>% arrange(YEAR , .by_group = TRUE )
+asec_vet1 = map_dfr(1977:2005 , collapse_function_vet1)
+asec_vet = map_dfr(2006:2018 , collapse_function_vet) %>% bind_rows(asec_vet1) %>% arrange(YEAR , .by_group = TRUE )
+asec_care = map_dfr(1977:2018 , collapse_function_care)
+asec_pop = map_dfr(1977:2018 , collapse_function_pop )
+asec_st = asec_pop %>% bind_cols( asec_care , test_df , asec_vet , asec_lf ) %>% 
+  select( -STATEFIP1 , -STATEFIP2 , -STATEFIP3 , -STATEFIP4 , 
+          -YEAR1 , -YEAR2 , -YEAR3 , -YEAR4)
+toc()
 
 write.table(x = asec_st, 
             file = "D:/Economics/Data/CPS/asec_st")
