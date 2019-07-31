@@ -98,7 +98,7 @@ asec_st = asec_pop %>% bind_cols( asec_care , test_df , asec_vet , asec_lf ) %>%
 toc()
 
 write.table(x = asec_st, 
-            file = "D:/Economics/Data/CPS/asec_st")
+            file = "~/asec_st")
 
 asec_st$STATEFIP <- factor(asec_st$STATEFIP ,
                            levels = c( 
