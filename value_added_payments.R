@@ -141,11 +141,56 @@ payments$factor = factor( payments$factor ,
 setwd("D:/Economics/Projects/econometrics")
 saveRDS(payments , "payments.rds")
 
-total_spend = payments %>% filter(category == "Health care and social assistance" )
+payments_totals = payments %>% 
+        filter( factor == "Total" )
+payments_wages = payments %>% 
+        filter( factor == "Compensation of employees" )
+payments_profit = payments %>% 
+        filter( factor == "Gross operating surplus" )
+payments_tax = payments %>%
+        filter( factor == "Taxes on production and imports less subsidies")
 
-ggplot( data = total_spend ) +
+payments_shares = bind_cols( year = payments_totals$year ,
+                             category = payments_totals$category ,
+                             total.share = payments_totals$spending / payments_totals$spending ,
+                             lab.share = payments_wages$spending / payments_totals$spending ,
+                             tax.share = payments_tax$spending / payments_totals$spending ,
+                             profit.share = payments_profit$spending / payments_totals$spending) %>%
+        reshape( varying = 3:6 ,
+                 direction = "long" ,
+                 v.names = "share" ,
+                 timevar = "factor"
+                 ) %>% select( -id ) %>% arrange( year , category , factor )
+
+payments_shares$factor = factor( payments_shares$factor , 
+                          levels = c(1:4) , 
+                          labels = c(
+                                  "Total" ,
+                                  "Compensation of employees" ,
+                                  "Taxes on production and imports less subsidies" ,
+                                  "Gross operating surplus" 
+                          )
+)
+
+payment_df  = payments %>% bind_cols(payments_shares %>% select(share))
+
+ggplot( data = payment_df %>% 
+                filter( category == "Construction" ,
+                        factor != "Total" ) ) +
+        geom_line( aes( x = year , 
+                        y = share ,
+                        color = factor
+                        )
+        ) +
+        scale_y_continuous(name= "Pct. of Value Added") +
+        ggtitle("Construction")
+
+ggplot( data = payment_df %>% 
+                filter( category == "Construction") ) +
         geom_line( aes( x = year , 
                         y = spending ,
                         color = factor
-                        )
-        ) 
+        )
+        ) +
+        ggtitle("Construction") +
+        scale_y_continuous(name="$ spent")
