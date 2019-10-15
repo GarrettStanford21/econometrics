@@ -4,7 +4,8 @@ p_load( haven ,
         dplyr , 
         tidyr ,
         reshape ,
-        ggplot2
+        ggplot2 ,
+        dynlm
         )
 
 setwd("D:/Economics/Data/Production Data/")
@@ -319,32 +320,18 @@ real_payments_df$cpi = factor( real_payments_df$cpi ,
 saveRDS( payments_df , "payments_and_VAshares.rds")
 saveRDS( real_payments_df , "real_payments.rds")
 
-ggplot( data = payments_df %>% 
-                filter( category == "Wholesale trade" ,
-                        factor != "Total" ) ) +
+payments_kl = payments %>% filter( factor == "Compensation of employees" |
+                                           factor == "Gross operating surplus")
+
+ggplot( data = payments_kl %>% 
+                filter( category == "Gross domestic product") 
+) +
         geom_line( aes( x = year , 
-                        y = share ,
-                        color = factor
-                        )
+                        y = share  ,
+                   color = factor ) ,
+                   size = 1 
+                   
         ) +
         scale_y_continuous(name= "Pct. of Value Added") +
-        ggtitle("Wholesale trade")
-
-ggplot( ) +
-        geom_line( data = payments_df %>% 
-                           filter( category == "Wholesale trade") ,
-                   aes( x = year , 
-                        y = spending ,
-                        color = factor
-        )
-        ) +
-        geom_line( data = real_payments_df %>% 
-                           filter( category == "Wholesale trade" , 
-                                   cpi == "Real" ) ,
-                   aes( x = year , 
-                        y = payments ,
-                        color = cpi
-                   )
-        ) +
-        ggtitle("Wholesale trade") +
-        scale_y_continuous(name="$(Millions) spent")
+        ggtitle("Share of GDP") +
+        theme_bw()
